@@ -1,0 +1,271 @@
+---
+title: "Quantidade de trabalhadores intermitentes"
+author: "gustavoppmonteiro"
+date: "19/02/2022"
+# output: html_document
+# 
+# output:
+#   prettydoc::html_pretty:
+#     theme: leonids
+
+output:
+  rmdformats::readthedown:
+    highlight: kate
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+knitr::knit_hooks$set(inline = function(x) {
+prettyNum(x, big.mark=".")
+})
+
+library(knitr)
+library(tidyverse)
+library(here)
+library(kableExtra)
+
+```
+
+```{r foto, echo=FALSE, fig.align='center', out.width="75%"}
+
+knitr::include_graphics(here::here("img", "figura.jpg"))
+
+```
+
+
+Abaixo, vamos estimar a quantidade de vínculos intermitentes no Brasil, no final de 2021.
+Para isso, vamos juntar informações de duas bases do Ministério da Economia:
+
+
+1. **Rais** (Relação Anual de Informações Sociais) que contém estoque de vínculos de empregados formais (exceto MEI).
+O último dado divulgado é o de 31/12/2020.
+
+1. **Novo Caged** (Cadastro Geral de Empregados e Desempregados) que contém os registros mensais de movimentação - admissões e desligamentos - dos vínculos celetistas.
+O último dado divulgado é o de dez/2021.
+
+
+
+O Estoque de vínculos intermitentes ao final de 2021 será calculado como: 
+
+
+$${\text Estoque_{2021}= Estoque\ Rais_{dez/2020}+Saldo\ das\ movimentações\ do\ Caged_{jan-dez2021}}$$ 
+
+Em que, o Saldo das movimentações do Caged é dado pela diferença: ${\text Admissões - Desligamentos}$.
+
+
+
+## Rais 2020 (por região)
+
+
+```{r tabela_regioes, echo=FALSE, warning=FALSE}
+
+rais <- read.csv2(here::here("dados", "rais_31122020.csv"))
+
+tab1 <- rais %>% 
+        mutate(gr = trunc(uf/10)) %>% 
+        mutate(regiao = case_when(gr==1~"Norte", 
+                                  gr==2~"Nordeste", 
+                                  gr==3~"Sudeste", 
+                                  gr==4~"Sul", 
+                                  gr==5~"Centro Oeste")) %>% 
+
+        group_by(regiao) %>% 
+        summarise(qde = sum(n_intermitentes)) %>% 
+        arrange(-qde) %>% 
+        
+        janitor::adorn_totals()
+
+tab_f <- tab1 %>% 
+        rename("Grande Região" = regiao,
+               "Vínculos intermitentes" = qde)
+
+kable(tab_f, 
+      format.args = list(big.mark = "."),
+      caption = "Número de vínculos intermitentes segundo região - Brasil dez/2020") %>% 
+        kableExtra::kable_styling(full_width = F)
+
+```
+
+
+Usando apenas a Rais, sabemos que no final de 2020 estavam registrados **`r max(tab1$qde)`** vínculos intermitentes no Brasil.
+
+A região com maior número de vínculos intermitentes foi a **`r tab1$regiao[1]`**, que registrou **`r tab1$qde[1]`** vínculos.
+
+Já a região **`r tab1$regiao[5]`** registrou a menor quantidade de vínculos entre as regiões: **`r min(tab1$qde)`**.
+
+
+
+```{r grafico_regioes, echo=FALSE, fig.cap="Número de vínculos intermitentes segundo região - Brasil dez/2020"}
+
+# 
+# tab1 <- rais %>%
+#         mutate(
+#                 gr = trunc(uf / 10),
+#                 
+#                 regiao = case_when(
+#                         gr == 1 ~ "Norte",
+#                         gr == 2 ~ "Nordeste",
+#                         gr == 3 ~ "Sudeste",
+#                         gr == 4 ~ "Sul",
+#                         gr == 5 ~ "Centro Oeste"
+#                 )
+#         ) %>%
+#         
+#         group_by(regiao) %>%
+#         summarise(qde = sum(n_intermitentes)) %>%
+#         arrange(-qde) %>%
+#         
+#         janitor::adorn_totals()
+# 
+# 
+# ggplot2::ggplot(tab1, mapping = aes(x = reorder(regiao, qde), qde)) +
+#         geom_col() +
+#         
+#         scale_x_discrete(name = "Região") +
+#         scale_y_continuous(name = "Número de intermitentes")
+
+```
+
+
+
+## Rais 2020 + Caged 2021 (por região)
+
+Juntando o estoque de vínculos da Rais 2020 com o saldo das movimentações do Caged em 2021, 
+temos uma ideia do estoque de intermitentes registrados até dez/2021.
+
+
+
+```{r tabela_regioes_caged, echo=FALSE, message=FALSE, warning=FALSE}
+
+# 
+# caminho <- "D:/Dados/Bases de dados/novo caged/atualizacao/"
+# 
+# 
+# caged_2021 <- read.csv2(paste0(caminho, "caged_2021.csv")) %>% 
+#         select(c("competenciamov",
+#                  "saldomovimentacao",
+#                  "uf",
+#                  "subclasse",
+#                  "indtrabintermitente",
+#                  "indicadordeexclusao"))
+# 
+# caged_2021 <- caged_2021 %>% 
+#         filter(indtrabintermitente==1) %>% 
+#         filter(competenciamov>=202101) %>% 
+#         select(-c("competenciamov", "indtrabintermitente"))
+# 
+# write.csv2(caged_2021, file = "./dados/caged.csv")
+
+caged_2021 <- read.csv2(here::here("dados", "caged.csv"))
+
+
+t1 <- caged_2021 %>%
+        group_by(uf, subclasse) %>%
+
+        summarise(estat_fdp = sum(saldomovimentacao[is.na(indicadordeexclusao)]),
+                  exclusao = sum(saldomovimentacao[!is.na(indicadordeexclusao)])) %>%
+        
+        # tira exclusões dos desligamentos
+        mutate(movimentacao = estat_fdp - exclusao,
+               .keep = "unused") %>% 
+        
+        rename("cnae" = subclasse)
+
+
+
+t_final <- left_join(rais, t1,
+                     by = c("uf", "cnae")) %>% 
+        
+        mutate(movimentacao = ifelse(is.na(movimentacao),
+                                     0,
+                                     movimentacao),
+               
+               estoque = n_intermitentes + movimentacao)
+
+
+
+tab2 <- t_final %>% 
+        mutate(gr = trunc(uf/10)) %>% 
+        mutate(regiao = case_when(gr==1~"Norte", 
+                                  gr==2~"Nordeste", 
+                                  gr==3~"Sudeste", 
+                                  gr==4~"Sul", 
+                                  gr==5~"Centro Oeste")) %>% 
+
+        group_by(regiao) %>% 
+        summarise(qde = sum(estoque)) %>% 
+        arrange(-qde) %>% 
+        
+        janitor::adorn_totals()
+
+tab_f2 <- tab2 %>% 
+        rename("Grande Região" = regiao,
+               "Vínculos intermitentes" = qde)
+
+kable(tab_f2, 
+      format.args = list(big.mark = "."),
+      caption = "Número de vínculos intermitentes segundo região - Brasil dez/2021") %>% 
+        kableExtra::kable_styling(full_width = F)
+
+
+```
+
+
+
+Até dezembro de 2021, estavam registrados **`r max(tab2$qde)`** vínculos intermitentes, segundo informações da Rais e do Caged.
+
+
+A região com maior número de vínculos intermitentes foi a **`r tab2$regiao[1]`**, que registrou **`r tab2$qde[1]`** vínculos.
+
+Já a região **`r tab2$regiao[5]`** registrou a menor quantidade de vínculos entre as regiões: **`r min(tab2$qde)`**.
+
+
+
+
+```{r grafico_regioes_caged, echo=FALSE, fig.cap="Número de vínculos intermitentes segundo região - Brasil dez/2021"}
+
+
+tab3 <- t_final %>% 
+        mutate(gr = trunc(uf/10)) %>% 
+        mutate(regiao = case_when(gr==1~"Norte", 
+                                  gr==2~"Nordeste", 
+                                  gr==3~"Sudeste", 
+                                  gr==4~"Sul", 
+                                  gr==5~"Centro Oeste")) %>% 
+
+        group_by(regiao) %>% 
+        summarise(qde = sum(estoque)) %>% 
+        arrange(-qde) %>% 
+        
+        janitor::adorn_totals()
+
+
+
+
+ggplot2::ggplot(tab3, mapping = aes(x = reorder(regiao, qde), qde)) +
+        geom_col() +
+        
+        scale_x_discrete(name = "Região") +
+        scale_y_continuous(name = "Número de intermitentes")
+
+
+```
+
+
+Em 2021, o saldo de intermitentens (Admissões menos Desligamentos) foi de **`r (max(tab2$qde)-max(tab1$qde))`**, um aumento de **`r round(100*((max(tab2$qde)-max(tab1$qde))/max(tab1$qde)))`%** em relação ao ano anterior.
+
+
+---
+
+## Fontes
+
+1. Ministério da Economia. RAIS - [Sistema Dardo](https://bi.mte.gov.br/bgcaged/inicial.php).
+
+
+1. Microdados do [CAGED](http://pdet.mte.gov.br/novo-caged)
+
+
+1. Foto de [Pop & Zebra](https://unsplash.com/photos/wp81DxKUd1E)
+
+
