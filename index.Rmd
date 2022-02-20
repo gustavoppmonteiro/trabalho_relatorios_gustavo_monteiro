@@ -34,7 +34,7 @@ knitr::include_graphics(here::here("img", "figura.jpg"))
 ```
 
 
-Abaixo, vamos estimar a quantidade de vínculos intermitentes no Brasil, no final de 2021.
+Vamos estimar a quantidade de vínculos intermitentes no Brasil, no final de 2021.
 Para isso, vamos juntar informações de duas bases do Ministério da Economia:
 
 
