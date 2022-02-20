@@ -45,16 +45,6 @@ O último dado divulgado é o de 31/12/2020.
 O último dado divulgado é o de dez/2021.
 
 
-
-O Estoque de vínculos intermitentes ao final de 2021 será calculado como: 
-
-
-$${\text Estoque_{2021}= Estoque\ Rais_{dez/2020}+Saldo\ das\ movimentações\ do\ Caged_{jan-dez2021}}$$ 
-
-Em que, o Saldo das movimentações do Caged é dado pela diferença: ${\text Admissões - Desligamentos}$.
-
-
-
 ## Rais 2020 (por região)
 
 
@@ -133,6 +123,13 @@ Já a região **`r tab1$regiao[5]`** registrou a menor quantidade de vínculos e
 
 Juntando o estoque de vínculos da Rais 2020 com o saldo das movimentações do Caged em 2021, 
 temos uma ideia do estoque de intermitentes registrados até dez/2021.
+
+
+O Estoque de vínculos intermitentes ao final de 2021 será calculado como: 
+
+
+$${\text Estoque_{2021}= Estoque\ Rais_{dez/2020}+Admissões\ do\ Caged_{jan-dez2021}-Desligamentos\ do\ Caged_{jan-dez2021}}$$ 
+
 
 
 
