@@ -130,7 +130,9 @@ O Estoque de vínculos intermitentes ao final de 2021 será calculado como:
 
 $${\text Estoque_{2021}= Estoque\ Rais_{dez/2020}+Saldo\ de\ movimentações\ Caged_{jan-dez2021}}$$ 
 
-O Saldo de movimentações do Caged é Admissões menos Desligamentos.
+O Saldo de movimentações do Caged é calculado subtraindo o total de Desligamentos do total de Admissões.
+
+Abaixo temos a estimativa do estoque de vínculos intermitentes em dez/2021.
 
 
 
